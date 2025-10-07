@@ -1,11 +1,10 @@
 name: Build GlowEQ Android APK
 
+# Pode ser disparado manualmente ou em push para main
 on:
   push:
     branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
-  workflow_dispatch:  # permite executar manualmente no GitHub Actions
+  workflow_dispatch:
 
 jobs:
   build-apk:
@@ -13,8 +12,48 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
+      # 1️⃣ Fazer checkout do repositório
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      # 2️⃣ Instalar Python
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # 3️⃣ Instalar dependências do Buildozer e Android
+      - name: Install Buildozer & dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            git zip unzip openjdk-17-jdk python3-pip \
+            python3-setuptools python3-wheel python3-venv \
+            libffi-dev libssl-dev autoconf automake \
+            libtool pkg-config libsqlite3-dev zlib1g-dev \
+            libncurses5-dev libncursesw5-dev \
+            libreadline-dev libgdbm-dev libdb5.3-dev \
+            libbz2-dev libexpat1-dev liblzma-dev \
+            libffi-dev libmpdec-dev
+          pip install --upgrade pip
+          pip install buildozer cython
+
+      # 4️⃣ Compilar APK
+      - name: Build APK with Buildozer
+        working-directory: ./  # garante que está na raiz do repositório
+        run: |
+          buildozer android debug
+        env:
+          ANDROIDSDK: /home/runner/.buildozer/android/platform/android-sdk
+          ANDROIDNDK: /home/runner/.buildozer/android/platform/android-ndk-r25b
+          PATH: /home/runner/.local/bin:$PATH
+
+      # 5️⃣ Upload do APK gerado
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: GlowEQ-debug-apk
+          path: bin/*.apk
 
       - name: Set up Python
         uses: actions/setup-python@v5
