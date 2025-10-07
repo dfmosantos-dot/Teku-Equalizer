@@ -37,22 +37,19 @@ jobs:
           pip install --upgrade pip
           pip install buildozer cython
 
-      # 3.1️⃣ Instalar Android SDK + Build Tools (corrigido para AIDL)
+      # 3.1️⃣ Instalar Android SDK + Build Tools oficialmente
       - name: Install Android SDK and Build Tools
         run: |
           export ANDROID_HOME=$HOME/Android/Sdk
-          mkdir -p $ANDROID_HOME/cmdline-tools
-          cd $ANDROID_HOME/cmdline-tools
-          wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O tools.zip
-          unzip -q tools.zip
-          # Mover conteúdo descompactado para "latest"
-          mkdir -p $ANDROID_HOME/cmdline-tools/latest
-          mv cmdline-tools/* $ANDROID_HOME/cmdline-tools/latest/ || true
-          # Atualizar PATH
+          mkdir -p $ANDROID_HOME
+          cd $ANDROID_HOME
+          # Baixar command-line tools oficial
+          wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
+          mkdir -p cmdline-tools/latest
+          unzip -q cmdline-tools.zip -d cmdline-tools/latest
           export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
-          # Aceitar licenças
+          # Aceitar licenças e instalar ferramentas necessárias
           yes | sdkmanager --sdk_root=$ANDROID_HOME --licenses || true
-          # Instalar componentes necessários (inclui aidl)
           sdkmanager --sdk_root=$ANDROID_HOME "platform-tools" "platforms;android-33" "build-tools;33.0.2"
 
       # 4️⃣ Build APK
