@@ -37,7 +37,7 @@ jobs:
           pip install --upgrade pip
           pip install buildozer cython
 
-      # 3.1️⃣ Instalar Android SDK + Build Tools (corrigido para sdkmanager)
+      # 3.1️⃣ Instalar Android SDK + Build Tools corretamente
       - name: Install Android SDK and Build Tools
         run: |
           export ANDROID_HOME=$HOME/Android/Sdk
@@ -45,16 +45,17 @@ jobs:
           cd $ANDROID_HOME/cmdline-tools
           wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O tools.zip
           unzip -q tools.zip
-          # Mover a pasta descompactada para "latest"
+          # mover conteúdo interno cmdline-tools para latest
           mkdir -p $ANDROID_HOME/cmdline-tools/latest
           mv cmdline-tools/* $ANDROID_HOME/cmdline-tools/latest/
-          # Atualizar PATH para sdkmanager
+          # atualizar PATH para sdkmanager
           export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
-          # Aceitar licenças e instalar componentes necessários
+          # aceitar licenças
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME --licenses || true
+          # instalar platform-tools, platforms e build-tools (inclui aidl)
           $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME "platform-tools" "platforms;android-33" "build-tools;33.0.2"
 
-      # 4️⃣ Build APK
+      # 4️⃣ Compilar APK
       - name: Build APK with Buildozer
         working-directory: ./
         run: |
@@ -64,7 +65,7 @@ jobs:
           ANDROIDSDK: $HOME/Android/Sdk
           ANDROIDNDK: /home/runner/.buildozer/android/platform/android-ndk-r25b
 
-      # 5️⃣ Upload APK
+      # 5️⃣ Upload APK gerado
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
