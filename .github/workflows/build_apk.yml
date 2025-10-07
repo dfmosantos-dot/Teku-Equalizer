@@ -41,22 +41,27 @@ jobs:
       - name: Install Android SDK and Build Tools
         run: |
           export ANDROID_HOME=$HOME/Android/Sdk
+          mkdir -p $ANDROID_HOME/cmdline-tools
+          cd $ANDROID_HOME/cmdline-tools
+          # Baixar command-line tools oficiais
+          wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O tools.zip
+          unzip -q tools.zip
+          # Mover para o formato esperado "latest"
           mkdir -p $ANDROID_HOME/cmdline-tools/latest
-          cd $ANDROID_HOME/cmdline-tools/latest
-          wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O commandlinetools.zip
-          unzip commandlinetools.zip
-          # Aceitar licenças de forma confiável
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME --licenses || true
-          # Instalar plataformas e build-tools
-          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME "platform-tools" "platforms;android-33" "build-tools;33.0.2"
+          mv cmdline-tools/* $ANDROID_HOME/cmdline-tools/latest/ || true
+          # Adicionar SDK ao PATH
+          export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
+          # Aceitar licenças e instalar componentes necessários
+          yes | sdkmanager --sdk_root=$ANDROID_HOME --licenses || true
+          sdkmanager --sdk_root=$ANDROID_HOME "platform-tools" "platforms;android-33" "build-tools;33.0.2"
 
       # 4️⃣ Compilar APK
       - name: Build APK with Buildozer
-        working-directory: ./   # garante que buildozer.spec está na raiz
+        working-directory: ./
         run: |
           buildozer android debug
         env:
-          PATH: /usr/bin:$PATH:/home/runner/.local/bin:$HOME/Android/Sdk/platform-tools
+          PATH: /usr/bin:$PATH:/home/runner/.local/bin:$HOME/Android/Sdk/platform-tools:$HOME/Android/Sdk/cmdline-tools/latest/bin
           ANDROIDSDK: $HOME/Android/Sdk
           ANDROIDNDK: /home/runner/.buildozer/android/platform/android-ndk-r25b
 
