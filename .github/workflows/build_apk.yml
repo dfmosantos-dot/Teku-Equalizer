@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-      # 1️⃣ Checkout do repositório
+      # 1️⃣ Checkout
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -37,25 +37,25 @@ jobs:
           pip install --upgrade pip
           pip install buildozer cython
 
-      # 3.1️⃣ Instalar Android SDK + Build Tools (corrigido)
+      # 3.1️⃣ Instalar Android SDK + Build Tools (corrigido para AIDL)
       - name: Install Android SDK and Build Tools
         run: |
           export ANDROID_HOME=$HOME/Android/Sdk
           mkdir -p $ANDROID_HOME/cmdline-tools
           cd $ANDROID_HOME/cmdline-tools
-          # Baixar command-line tools oficiais
           wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O tools.zip
           unzip -q tools.zip
-          # Mover para o formato esperado "latest"
+          # Mover conteúdo descompactado para "latest"
           mkdir -p $ANDROID_HOME/cmdline-tools/latest
           mv cmdline-tools/* $ANDROID_HOME/cmdline-tools/latest/ || true
-          # Adicionar SDK ao PATH
+          # Atualizar PATH
           export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
-          # Aceitar licenças e instalar componentes necessários
+          # Aceitar licenças
           yes | sdkmanager --sdk_root=$ANDROID_HOME --licenses || true
+          # Instalar componentes necessários (inclui aidl)
           sdkmanager --sdk_root=$ANDROID_HOME "platform-tools" "platforms;android-33" "build-tools;33.0.2"
 
-      # 4️⃣ Compilar APK
+      # 4️⃣ Build APK
       - name: Build APK with Buildozer
         working-directory: ./
         run: |
@@ -65,7 +65,7 @@ jobs:
           ANDROIDSDK: $HOME/Android/Sdk
           ANDROIDNDK: /home/runner/.buildozer/android/platform/android-ndk-r25b
 
-      # 5️⃣ Upload do APK gerado
+      # 5️⃣ Upload APK
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
