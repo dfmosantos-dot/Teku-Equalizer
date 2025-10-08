@@ -55,15 +55,26 @@ jobs:
           # instalar platform-tools, platforms e build-tools (inclui aidl)
           $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME "platform-tools" "platforms;android-33" "build-tools;33.0.2"
 
+      # 3.2️⃣ Baixar Android NDK r25b
+      - name: Download Android NDK r25b
+        run: |
+          export ANDROID_HOME=$HOME/Android/Sdk
+          mkdir -p $HOME/.buildozer/android/platform
+          cd $HOME/.buildozer/android/platform
+          wget https://dl.google.com/android/repository/android-ndk-r25b-linux.zip -O ndk.zip
+          unzip -q ndk.zip
+          # O ZIP extrai diretamente para android-ndk-r25b/, então renomeie se necessário (aqui já está correto)
+
       # 4️⃣ Compilar APK
       - name: Build APK with Buildozer
         working-directory: ./
         run: |
           buildozer android debug
         env:
-          PATH: /usr/bin:$PATH:/home/runner/.local/bin:$HOME/Android/Sdk/platform-tools:$HOME/Android/Sdk/cmdline-tools/latest/bin
-          ANDROIDSDK: $HOME/Android/Sdk
+          PATH: ${{ env.PATH }}:/home/runner/Android/Sdk/cmdline-tools/latest/bin:/home/runner/Android/Sdk/platform-tools
+          ANDROIDSDK: /home/runner/Android/Sdk
           ANDROIDNDK: /home/runner/.buildozer/android/platform/android-ndk-r25b
+          JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
 
       # 5️⃣ Upload APK gerado
       - name: Upload APK artifact
