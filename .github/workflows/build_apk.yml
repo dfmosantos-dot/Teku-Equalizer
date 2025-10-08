@@ -1,3 +1,4 @@
+```yaml
 name: Build GlowEQ Android APK
 
 on:
@@ -36,9 +37,13 @@ jobs:
           sudo apt-get install -y git zip unzip openjdk-17-jdk python3-pip \
             build-essential libffi-dev libssl-dev autoconf automake libtool pkg-config \
             zlib1g-dev libncurses5-dev libreadline-dev libbz2-dev libexpat1-dev liblzma-dev
-          # Detectar JAVA_HOME dinamicamente
-          export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))
-          echo "JAVA_HOME set to: $JAVA_HOME"
+          # Definir JAVA_HOME explicitamente para OpenJDK 17 (evita default Java 11 do runner)
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          export PATH=$JAVA_HOME/bin:$PATH
+          # Verificar versão do Java para debug
+          java -version
+          # Configurar default com update-alternatives para garantir consistência
+          sudo update-alternatives --set java $JAVA_HOME/bin/java
           git --version
           pip install --upgrade pip
           pip install buildozer cython
@@ -46,6 +51,10 @@ jobs:
       # 3.1️⃣ Instalar Android SDK + Build Tools corretamente
       - name: Install Android SDK and Build Tools
         run: |
+          # Reforçar JAVA_HOME e PATH para este step (compatibilidade com SDK recente)
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          export PATH=$JAVA_HOME/bin:$PATH
+          java -version  # Verificação para debug
           export ANDROID_HOME=/home/runner/Android/Sdk
           export ANDROIDSDK=$ANDROID_HOME
           mkdir -p $ANDROID_HOME/cmdline-tools
@@ -57,7 +66,7 @@ jobs:
           mv cmdline-tools/* $ANDROID_HOME/cmdline-tools/latest/
           # Atualizar PATH para sdkmanager
           export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
-          # Aceitar licenças (removido || true para falhar se necessário)
+          # Aceitar licenças (sem || true para falhar se necessário)
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME --licenses
           # Instalar platform-tools, platforms e build-tools (atualizado para API 34)
           $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME "platform-tools" "platforms;android-34" "build-tools;34.0.0"
@@ -101,9 +110,12 @@ jobs:
       # 4️⃣ Compilar APK
       - name: Build APK with Buildozer
         run: |
+          # Reforçar JAVA_HOME e PATH para este step
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          export PATH=$JAVA_HOME/bin:$PATH
+          java -version  # Verificação para debug
           export ANDROID_HOME=/home/runner/Android/Sdk
           export ANDROIDSDK=$ANDROID_HOME
-          export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))
           export PATH="$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/build-tools/34.0.0"
           git --version  # Verificação explícita para debug
           # Verificação explícita do aidl para debug (com fallback)
@@ -124,3 +136,4 @@ jobs:
         with:
           name: GlowEQ-debug-apk
           path: bin/*.apk
+```
