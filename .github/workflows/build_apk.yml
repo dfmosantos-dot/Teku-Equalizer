@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-apk:
-    name: Build Kivy Android APK
+    name: Build GlowEQ Android APK
     runs-on: ubuntu-22.04
 
     steps:
@@ -21,18 +21,24 @@ jobs:
         with:
           python-version: "3.11"
 
+      # 2.1️⃣ Cache pip
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt', '**/buildozer.spec') }}
+          restore-keys: ${{ runner.os }}-pip-
+
       # 3️⃣ Instalar dependências do sistema e Buildozer
       - name: Install Buildozer & system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y git zip unzip openjdk-17-jdk python3-pip \
-            python3-setuptools python3-wheel python3-venv \
-            libffi-dev libssl-dev autoconf automake \
-            libtool pkg-config libsqlite3-dev zlib1g-dev \
-            libncurses5-dev libncursesw5-dev \
-            libreadline-dev libgdbm-dev libdb5.3-dev \
-            libbz2-dev libexpat1-dev liblzma-dev \
-            libffi-dev libmpdec-dev
+            build-essential libffi-dev libssl-dev autoconf automake libtool pkg-config \
+            zlib1g-dev libncurses5-dev libreadline-dev libbz2-dev libexpat1-dev liblzma-dev
+          # Detectar JAVA_HOME dinamicamente
+          export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))
+          echo "JAVA_HOME set to: $JAVA_HOME"
           git --version
           pip install --upgrade pip
           pip install buildozer cython
@@ -41,40 +47,72 @@ jobs:
       - name: Install Android SDK and Build Tools
         run: |
           export ANDROID_HOME=/home/runner/Android/Sdk
+          export ANDROIDSDK=$ANDROID_HOME
           mkdir -p $ANDROID_HOME/cmdline-tools
           cd $ANDROID_HOME/cmdline-tools
-          wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O tools.zip
+          wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O tools.zip
           unzip -q tools.zip
-          # mover conteúdo interno cmdline-tools para latest
+          # Mover conteúdo interno cmdline-tools para latest
           mkdir -p $ANDROID_HOME/cmdline-tools/latest
           mv cmdline-tools/* $ANDROID_HOME/cmdline-tools/latest/
-          # atualizar PATH para sdkmanager
+          # Atualizar PATH para sdkmanager
           export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
-          # aceitar licenças
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME --licenses || true
-          # instalar platform-tools, platforms e build-tools (inclui aidl)
-          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME "platform-tools" "platforms;android-33" "build-tools;33.0.2"
+          # Aceitar licenças (removido || true para falhar se necessário)
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME --licenses
+          # Instalar platform-tools, platforms e build-tools (atualizado para API 34)
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
-      # 3.2️⃣ Baixar Android NDK r25b
+      # 3.2️⃣ Cache Android SDK
+      - name: Cache Android SDK
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/Android/Sdk
+          key: ${{ runner.os }}-android-sdk-${{ hashFiles('buildozer.spec') }}
+          restore-keys: ${{ runner.os }}-android-sdk-
+
+      # 3.3️⃣ Baixar Android NDK r25b
       - name: Download Android NDK r25b
         run: |
           export ANDROID_HOME=/home/runner/Android/Sdk
+          export ANDROIDSDK=$ANDROID_HOME
           mkdir -p /home/runner/.buildozer/android/platform
           cd /home/runner/.buildozer/android/platform
           wget https://dl.google.com/android/repository/android-ndk-r25b-linux.zip -O ndk.zip
           unzip -q ndk.zip
-          # O ZIP extrai diretamente para android-ndk-r25b/, então renomeie se necessário (aqui já está correto)
+          # Verificação: liste o conteúdo para debug
+          ls -la
+          # Verificar se o diretório foi criado corretamente
+          if [ ! -d "android-ndk-r25b" ]; then
+            echo "Erro: Diretório NDK não encontrado!"
+            exit 1
+          fi
+          # Opcional: symlink para padronizar (Buildozer usa o caminho exato, mas ajuda em compatibilidade)
+          ln -sf android-ndk-r25b android-ndk
+
+      # 3.4️⃣ Cache Android NDK e Buildozer
+      - name: Cache Android NDK and Buildozer
+        uses: actions/cache@v4
+        with:
+          path: |
+            /home/runner/.buildozer
+          key: ${{ runner.os }}-buildozer-ndk-${{ hashFiles('buildozer.spec') }}
+          restore-keys: ${{ runner.os }}-buildozer-ndk-
 
       # 4️⃣ Compilar APK
       - name: Build APK with Buildozer
-        working-directory: ./
         run: |
           export ANDROID_HOME=/home/runner/Android/Sdk
-          export PATH="/usr/bin:/usr/local/bin:$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/build-tools/33.0.2"
-          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          export ANDROIDSDK=$ANDROID_HOME
+          export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))
+          export PATH="$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/build-tools/34.0.0"
           git --version  # Verificação explícita para debug
-          ls -la $ANDROID_HOME/build-tools/33.0.2/aidl  # Verificação explícita do aidl para debug
-          aidl --version  # Verificação se aidl está no PATH
+          # Verificação explícita do aidl para debug (com fallback)
+          if [ -f "$ANDROID_HOME/build-tools/34.0.0/aidl" ]; then
+            ls -la $ANDROID_HOME/build-tools/34.0.0/aidl
+            aidl --version
+          else
+            echo "Warning: aidl not found in expected path"
+          fi
           buildozer android debug
         env:
           ANDROIDSDK: /home/runner/Android/Sdk
