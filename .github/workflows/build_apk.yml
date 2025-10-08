@@ -117,10 +117,10 @@ jobs:
           export ANDROIDSDK=$ANDROID_HOME
           export PATH="$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/build-tools/34.0.0"
           git --version  # Verificação explícita para debug
-          # Verificação explícita do aidl para debug (com fallback)
+          # Verificação explícita do aidl para debug (removido aidl --version, pois causa erro na versão 34.0.0; use --help para testar)
           if [ -f "$ANDROID_HOME/build-tools/34.0.0/aidl" ]; then
             ls -la $ANDROID_HOME/build-tools/34.0.0/aidl
-            aidl --version
+            aidl --help >/dev/null 2>&1 && echo "aidl found and functional" || echo "Warning: aidl exists but may not be functional"
           else
             echo "Warning: aidl not found in expected path"
           fi
