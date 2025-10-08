@@ -40,7 +40,7 @@ jobs:
       # 3.1️⃣ Instalar Android SDK + Build Tools corretamente
       - name: Install Android SDK and Build Tools
         run: |
-          export ANDROID_HOME=$HOME/Android/Sdk
+          export ANDROID_HOME=/home/runner/Android/Sdk
           mkdir -p $ANDROID_HOME/cmdline-tools
           cd $ANDROID_HOME/cmdline-tools
           wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O tools.zip
@@ -58,9 +58,9 @@ jobs:
       # 3.2️⃣ Baixar Android NDK r25b
       - name: Download Android NDK r25b
         run: |
-          export ANDROID_HOME=$HOME/Android/Sdk
-          mkdir -p $HOME/.buildozer/android/platform
-          cd $HOME/.buildozer/android/platform
+          export ANDROID_HOME=/home/runner/Android/Sdk
+          mkdir -p /home/runner/.buildozer/android/platform
+          cd /home/runner/.buildozer/android/platform
           wget https://dl.google.com/android/repository/android-ndk-r25b-linux.zip -O ndk.zip
           unzip -q ndk.zip
           # O ZIP extrai diretamente para android-ndk-r25b/, então renomeie se necessário (aqui já está correto)
@@ -69,12 +69,13 @@ jobs:
       - name: Build APK with Buildozer
         working-directory: ./
         run: |
+          export PATH="/usr/bin:/usr/local/bin:$PATH:/home/runner/Android/Sdk/cmdline-tools/latest/bin:/home/runner/Android/Sdk/platform-tools"
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          git --version  # Verificação explícita para debug
           buildozer android debug
         env:
-          PATH: ${{ env.PATH }}:/home/runner/Android/Sdk/cmdline-tools/latest/bin:/home/runner/Android/Sdk/platform-tools
           ANDROIDSDK: /home/runner/Android/Sdk
           ANDROIDNDK: /home/runner/.buildozer/android/platform/android-ndk-r25b
-          JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
 
       # 5️⃣ Upload APK gerado
       - name: Upload APK artifact
